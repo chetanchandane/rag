@@ -88,8 +88,8 @@ You'll need accounts and API keys from:
 
 ```bash
 # 1. Clone and enter the project
-git clone <your-repo-url>
-cd RAG
+git clone https://github.com/chetanchandane/rag.git
+cd rag
 
 # 2. Create and activate a virtual environment
 python -m venv venv
