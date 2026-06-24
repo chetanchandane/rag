@@ -41,8 +41,8 @@ class Config:
     cohere_rerank_model: str = "rerank-english-v3.0"
 
     # ── Vector DB (Qdrant Cloud) ───────────────────────────────────────────────
-    qdrant_url: str = field(default_factory=lambda: os.environ["QDRANT_URL"])
-    qdrant_api_key: str = field(default_factory=lambda: os.environ["QDRANT_API_KEY"])
+    qdrant_url: str = field(default_factory=lambda: os.environ["QDRANT_URL"].strip())
+    qdrant_api_key: str = field(default_factory=lambda: os.environ["QDRANT_API_KEY"].strip())
     collection_name: str = field(
         default_factory=lambda: os.environ.get("QDRANT_COLLECTION", "clinical_docs")
     )
