@@ -28,6 +28,11 @@ env/
 .coverage
 htmlcov/
 
+# Eval outputs — local JSONL files and result CSVs (never commit)
+tests/evals/golden_*.jsonl
+tests/evals/results/
+!tests/evals/results/.gitkeep
+
 # IDE
 .vscode/
 .idea/

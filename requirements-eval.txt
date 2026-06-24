@@ -1,0 +1,20 @@
+# Eval-only dependencies — NOT installed in production (not in requirements.txt / Dockerfile)
+# Install before running evals:
+#   pip install -r requirements-eval.txt
+#
+# In CI, both requirements.txt and this file are installed:
+#   pip install -r requirements.txt -r requirements-eval.txt
+
+ragas==0.4.3
+
+# ragas 0.4.3 imports `langchain_community.chat_models.vertexai`, a deprecated
+# shim that langchain-community removed in its v1.x "sunset" build (>=0.4).
+# Pin the whole langchain stack to the 0.3 generation that still ships it.
+langchain>=0.3,<0.4
+langchain-core>=0.3,<0.4
+langchain-community>=0.3,<0.4
+langchain-anthropic>=0.3,<0.4
+langchain-openai>=0.2,<0.4
+
+datasets>=4.0.0
+pandas>=2.0.0
