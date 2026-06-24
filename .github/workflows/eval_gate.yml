@@ -6,7 +6,7 @@ name: Ragas Eval Gate
 
 on:
   pull_request:
-    branches: [main]
+    branches: [master]
 
 jobs:
   eval-gate:
