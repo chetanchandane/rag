@@ -60,7 +60,9 @@ app.add_middleware(
 )
 
 # Serve ui/css and ui/js as /static/css and /static/js
-app.mount("/static", StaticFiles(directory=str(_UI_DIR)), name="static")
+# Guard against missing ui/ directory so the API still starts without it
+if _UI_DIR.exists():
+    app.mount("/static", StaticFiles(directory=str(_UI_DIR)), name="static")
 
 
 # ── Schemas ───────────────────────────────────────────────────────────────────
@@ -126,7 +128,10 @@ async def run_rag(question: str, top_k: int) -> dict:
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
 async def frontend():
     """Serve the UI — ui/index.html."""
-    return (_UI_DIR / "index.html").read_text()
+    index = _UI_DIR / "index.html"
+    if not index.exists():
+        return HTMLResponse("<h1>UI not found</h1><p>Deploy the ui/ directory.</p>", status_code=404)
+    return index.read_text()
 
 
 @app.get("/health", tags=["System"])

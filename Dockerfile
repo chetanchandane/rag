@@ -14,8 +14,9 @@ WORKDIR /app
 # Copy installed packages from builder
 COPY --from=builder /install /usr/local
 
-# Copy source code only (not data/ or .env)
+# Copy source code and frontend (not data/ or .env)
 COPY src/ ./src/
+COPY ui/ ./ui/
 
 # Non-root user for security
 RUN useradd -m appuser
