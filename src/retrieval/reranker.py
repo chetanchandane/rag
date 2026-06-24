@@ -1,39 +1,68 @@
 """
-reranker.py — Cross-encoder re-ranking
+reranker.py — Cohere cross-encoder re-ranking (Phase 2)
 
-Stage 1: Passthrough — returns chunks in the same order received.
-Stage 2 (planned): Cohere rerank-english-v3.0 cross-encoder.
-                   Replace the body of `rerank()` with the Cohere API call.
+Uses Cohere's rerank-english-v3.0 model to score each (query, chunk) pair
+directly, rather than relying on embedding similarity. Receives the top-20
+RRF-fused candidates from hybrid search and returns the top-5 by relevance.
 
-Keeping this module as a no-op in Stage 1 means the API and search module
-never need to change — just swap in the real implementation here.
+The rerank call is wrapped in asyncio.to_thread because the Cohere sync
+client is simpler to maintain across SDK versions than the async client.
 """
 
+import asyncio
+import os
+
+import cohere
 from langsmith import traceable
+
+from src.config import config
 
 
 class Reranker:
 
-    @traceable(name="rerank")
-    async def rerank(self, query: str, chunks: list[dict], top_n: int | None = None) -> list[dict]:
-        """
-        Stage 1: passthrough — return chunks unchanged.
+    def __init__(self):
+        self._co = cohere.Client(api_key=os.environ["COHERE_API_KEY"])
 
-        Stage 2 implementation (drop-in replacement):
-        -----------------------------------------------
-        import cohere
-        co = cohere.Client(api_key=os.environ["COHERE_API_KEY"])
-        docs = [c["text"] for c in chunks]
-        results = co.rerank(query=query, documents=docs,
-                            model="rerank-english-v3.0", top_n=top_n or 5)
-        reranked = []
-        for r in results.results:
-            chunk = chunks[r.index]
-            chunk["rerank_score"] = r.relevance_score
-            reranked.append(chunk)
-        return reranked
+    @traceable(name="rerank")
+    async def rerank(
+        self,
+        query: str,
+        chunks: list[dict],
+        top_n: int | None = None,
+    ) -> list[dict]:
         """
-        # Stage 1: identity function
-        if top_n:
-            return chunks[:top_n]
-        return chunks
+        Rerank chunks with Cohere cross-encoder.
+
+        Args:
+            query:  the original user question.
+            chunks: RRF-fused candidate list (up to retrieval_top_k=20 items).
+            top_n:  how many to return (defaults to config.default_top_k=5).
+
+        Returns:
+            top_n chunks sorted by Cohere relevance score (descending),
+            each with an added "rerank_score" key.
+        """
+        n = top_n or config.default_top_k
+        if not chunks:
+            return []
+
+        docs = [c["text"] for c in chunks]
+
+        def _sync_rerank():
+            return self._co.rerank(
+                query=query,
+                documents=docs,
+                model=config.cohere_rerank_model,
+                top_n=n,
+            )
+
+        response = await asyncio.to_thread(_sync_rerank)
+
+        reranked: list[dict] = []
+        for hit in response.results:
+            chunk = dict(chunks[hit.index])
+            chunk["rerank_score"] = round(hit.relevance_score, 6)
+            reranked.append(chunk)
+
+        # Results from Cohere are already sorted descending by relevance_score
+        return reranked

@@ -5,6 +5,11 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
+# Pre-download the BM25 fastembed model so it's baked into the image.
+# This avoids a network fetch on the first request in production.
+RUN PYTHONPATH=/install/lib/python3.12/site-packages \
+    python -c "from fastembed import SparseTextEmbedding; SparseTextEmbedding(model_name='Qdrant/bm25')"
+
 
 # ── Runtime stage ─────────────────────────────────────────────────────────────
 FROM python:3.12-slim

@@ -39,8 +39,9 @@ FastAPI (/query)
 |---|---|
 | API | FastAPI + Uvicorn |
 | LLM | Anthropic Claude (`claude-sonnet-4-6`) |
-| Embeddings | OpenAI `text-embedding-3-small` |
-| Vector DB | Qdrant Cloud |
+| Embeddings | OpenAI `text-embedding-3-small` (dense) + fastembed BM25 (sparse) |
+| Reranking | Cohere `rerank-english-v3.0` |
+| Vector DB | Qdrant Cloud (hybrid dense + sparse collection) |
 | Observability | LangSmith |
 | Frontend | Vanilla JS + CSS (dark theme) |
 | Deployment | Render |
@@ -216,8 +217,8 @@ Tests cover chunking logic, metadata preservation, reranker passthrough, and pro
 
 ## Roadmap
 
-**Stage 1 (current)** — Basic RAG: dense search, Claude generation, LangSmith tracing
+**Stage 1 (complete)** — Basic RAG: dense search, Claude generation, LangSmith tracing, dark-theme UI
 
-**Stage 2** — Advanced retrieval: hybrid BM25 + dense search, Cohere cross-encoder reranking, HyDE query expansion
+**Stage 2 (current)** — Advanced retrieval: HyDE query expansion, hybrid BM25 + dense search with RRF, Cohere cross-encoder reranking
 
 **Stage 3** — Evaluation: synthetic golden dataset, Ragas metrics (Faithfulness, Context Precision), CI/CD quality gate

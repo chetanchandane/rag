@@ -15,6 +15,10 @@ qdrant-client==1.12.1
 pypdf==5.1.0
 langchain-text-splitters==0.3.2
 
+# Phase 2: Hybrid search & reranking
+fastembed==0.8.0            # BM25 sparse embeddings (local, no API)
+cohere==7.0.4               # Cross-encoder reranking
+
 # Utilities
 pydantic==2.10.3
 python-dotenv==1.0.1        # for local .env loading
