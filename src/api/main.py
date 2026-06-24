@@ -116,7 +116,13 @@ async def run_rag(question: str, top_k: int) -> dict:
     return {
         "answer": answer,
         "sources": [
-            {"source": c["source"], "page": c["page"], "score": c["score"]}
+            {
+                "source": c["source"],
+                "page":   c["page"],
+                # Prefer Cohere rerank_score (0–1, cross-encoder) when available.
+                # Falls back to cosine similarity from the dense search pass.
+                "score":  c.get("rerank_score", c["score"]),
+            }
             for c in chunks
         ],
         "chunks_used": len(chunks),

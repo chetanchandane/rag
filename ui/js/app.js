@@ -90,14 +90,18 @@ function renderSources(sources) {
     return;
   }
 
-  sources.forEach(s => {
+  sources.forEach((s, i) => {
+    const rank = i + 1;
     const pct  = Math.round((s.relevance_score ?? s.score ?? 0) * 100);
     const name = s.source.replace(/\.pdf$/i, '');
 
     const card = document.createElement('div');
     card.className = 'source-card';
     card.innerHTML = `
-      <div class="source-name" title="${escapeHtml(s.source)}">${escapeHtml(name)}</div>
+      <div class="source-card-header">
+        <div class="source-name" title="${escapeHtml(s.source)}">${escapeHtml(name)}</div>
+        <span class="rank-badge">#${rank}</span>
+      </div>
       <div class="source-page">Page ${s.page}</div>
       <div class="relevance-track">
         <div class="relevance-fill" data-pct="${pct}"></div>
@@ -113,6 +117,14 @@ function renderSources(sources) {
       bar.style.width = bar.dataset.pct + '%';
     });
   });
+
+  // Legend — rendered once after the grid
+  const legend = document.createElement('p');
+  legend.className = 'sources-legend';
+  legend.innerHTML =
+    '<span class="legend-dot legend-dot--score"></span>% = Cohere cross-encoder relevance score &nbsp;·&nbsp; ' +
+    '<span class="legend-dot legend-dot--rank"></span>#rank = order after hybrid BM25 + semantic reranking';
+  sourcesGrid.after(legend);
 }
 
 function escapeHtml(str) {

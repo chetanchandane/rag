@@ -400,14 +400,36 @@ body {
 }
 .source-card:hover { border-color: var(--border-hover); }
 
+.source-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.2rem;
+}
+
 .source-name {
   font-size: 0.8125rem;
   font-weight: 500;
   color: var(--text);
-  margin-bottom: 0.2rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+.rank-badge {
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-dim);
+  border: 1px solid rgba(129, 140, 248, 0.22);
+  border-radius: 4px;
+  padding: 0.05rem 0.4rem;
+  letter-spacing: 0.02em;
+  line-height: 1.6;
 }
 
 .source-page {
@@ -435,6 +457,34 @@ body {
   font-size: 0.6875rem;
   color: var(--text-dim);
   margin-top: 0.375rem;
+}
+
+/* Sources legend */
+.sources-legend {
+  margin-top: 0.75rem;
+  font-size: 0.6875rem;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.legend-dot--score {
+  background: linear-gradient(90deg, var(--accent), #a78bfa);
+}
+
+.legend-dot--rank {
+  background: var(--accent-dim);
+  border: 1px solid rgba(129, 140, 248, 0.3);
 }
 
 /* ── 7. State D: Error card ──────────────────────────────────────────────── */
