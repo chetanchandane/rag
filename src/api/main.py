@@ -2,17 +2,24 @@
 FastAPI application — Clinical RAG API
 
 Endpoints:
+  GET  /         → serves the frontend UI (ui/index.html)
   GET  /health   → liveness check
   POST /query    → ask a compliance question
   POST /ingest   → upload and index a PDF
 """
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from langsmith import traceable
 from pydantic import BaseModel, Field
+
+# Resolve ui/ directory relative to this file
+_UI_DIR = Path(__file__).resolve().parent.parent.parent / "ui"
 
 from src.config import config
 from src.ingestion.indexer import index_pdf_bytes
@@ -51,6 +58,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Serve ui/css and ui/js as /static/css and /static/js
+app.mount("/static", StaticFiles(directory=str(_UI_DIR)), name="static")
 
 
 # ── Schemas ───────────────────────────────────────────────────────────────────
@@ -112,6 +122,12 @@ async def run_rag(question: str, top_k: int) -> dict:
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
+
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
+async def frontend():
+    """Serve the UI — ui/index.html."""
+    return (_UI_DIR / "index.html").read_text()
+
 
 @app.get("/health", tags=["System"])
 def health():

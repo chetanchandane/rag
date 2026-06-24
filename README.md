@@ -1,5 +1,11 @@
 # Clinical Trial Compliance RAG
 
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Qdrant](https://img.shields.io/badge/Qdrant-DC244C?style=flat-square&logo=qdrant&logoColor=white)](https://qdrant.tech)
+[![LangSmith](https://img.shields.io/badge/LangSmith-1C3C3C?style=flat-square&logo=langchain&logoColor=white)](https://smith.langchain.com)
+[![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white)](https://www.docker.com)
+[![Render](https://img.shields.io/badge/Render-000000?style=flat-square&logo=render&logoColor=white)](https://render.com)
+
 A production-grade Retrieval-Augmented Generation system for querying FDA and ICH regulatory documents. Ask compliance questions in plain English and get grounded, cited answers — no hallucinations.
 
 ---
@@ -36,6 +42,7 @@ FastAPI (/query)
 | Embeddings | OpenAI `text-embedding-3-small` |
 | Vector DB | Qdrant Cloud |
 | Observability | LangSmith |
+| Frontend | Vanilla JS + CSS (dark theme) |
 | Deployment | Render |
 
 ---
@@ -61,6 +68,10 @@ RAG/
 │   │   └── llm_client.py     # Claude wrapper
 │   └── api/
 │       └── main.py           # FastAPI app + RAG orchestration
+├── ui/
+│   ├── index.html            # App shell
+│   ├── css/styles.css        # Dark theme, all 4 UI states
+│   └── js/app.js             # State machine, API calls, markdown rendering
 ├── tests/
 │   ├── test_ingestion.py
 │   └── test_retrieval.py
@@ -126,13 +137,13 @@ Re-running is safe — already-indexed files are automatically skipped.
 
 ---
 
-## Running the API
+## Running Locally
 
 ```bash
 uvicorn src.api.main:app --reload
 ```
 
-Swagger UI available at: **http://localhost:8000/docs**
+Open **http://localhost:8000** — the UI loads directly.
 
 ---
 

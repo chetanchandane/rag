@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ClinicalRAG</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/styles.css" />
+</head>
+<body>
+  <div class="app">
+
+    <!-- ── Header ─────────────────────────────────────────────────── -->
+    <header class="header">
+      <div class="header-left">
+        <span class="logo">ClinicalRAG</span>
+        <span class="status-dot" id="statusDot"></span>
+        <span class="status-text" id="statusText">System Ready</span>
+      </div>
+      <div class="header-right">
+        <a
+          href="https://github.com/chetanchandane/rag"
+          target="_blank"
+          rel="noopener"
+          class="header-link"
+        >GitHub ↗</a>
+      </div>
+    </header>
+
+    <!-- ── Main workspace ─────────────────────────────────────────── -->
+    <main class="workspace">
+
+      <!-- Query input -->
+      <div class="query-section">
+        <div class="input-wrapper" id="inputWrapper">
+          <textarea
+            id="queryInput"
+            class="query-input"
+            placeholder="Ask a compliance question..."
+            rows="3"
+            spellcheck="false"
+          ></textarea>
+          <div class="input-footer">
+            <span class="char-hint">Shift + Enter for new line</span>
+            <button class="ask-btn" id="askBtn">
+              Ask
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                <path d="M3 8h10M9 4l4 4-4 4" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Example chips -->
+        <div class="chips" id="chipsContainer">
+          <button class="chip" data-q="What is the required timeline for reporting SAEs under ICH E6?">SAE reporting timeline</button>
+          <button class="chip" data-q="How should protocol deviations be handled and documented under GCP?">Protocol deviations</button>
+          <button class="chip" data-q="What are the investigator responsibilities under ICH E6 GCP?">Investigator responsibilities</button>
+          <button class="chip" data-q="What constitutes a serious adverse event under FDA regulations?">SAE definition</button>
+        </div>
+      </div>
+
+      <!-- ── Results area — one child visible at a time ───────────── -->
+      <div class="results-area" id="resultsArea">
+
+        <!-- State B: Loading -->
+        <div class="loading-state hidden" id="loadingState" aria-live="polite" aria-label="Loading answer">
+          <div class="loading-dots">
+            <span></span><span></span><span></span>
+          </div>
+          <div class="skeleton-lines">
+            <div class="skeleton-line long"></div>
+            <div class="skeleton-line medium"></div>
+            <div class="skeleton-line short"></div>
+          </div>
+        </div>
+
+        <!-- State C: Answer -->
+        <div class="answer-state hidden" id="answerState">
+          <div class="answer-header">
+            <span class="section-label">Answer</span>
+            <span class="badge" id="chunksUsed"></span>
+          </div>
+          <div class="answer-text" id="answerText"></div>
+
+          <div class="divider"></div>
+
+          <div class="sources-header">
+            <span class="section-label">Sources</span>
+          </div>
+          <div class="sources-grid" id="sourcesGrid"></div>
+        </div>
+
+        <!-- State D: Error -->
+        <div class="error-state hidden" id="errorState">
+          <div class="error-card">
+            <span class="error-icon">⚠</span>
+            <p class="error-message" id="errorMessage">Something went wrong.</p>
+            <button class="retry-btn" id="retryBtn">Try again</button>
+          </div>
+        </div>
+
+      </div><!-- /results-area -->
+    </main>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
