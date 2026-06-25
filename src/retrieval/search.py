@@ -139,8 +139,12 @@ class Searcher:
             info  = await self.qdrant.get_collection(config.collection_name)
             vconf = info.config.params.vectors
             return isinstance(vconf, dict) and config.dense_vector_name in vconf
-        except Exception:
-            return False
+        except Exception as e:
+            # Log the failure so it's visible in CI — don't silently swallow it.
+            # Default to True: the dense-only fallback also fails on named-vector
+            # collections (Qdrant 400), so hybrid is always the correct path here.
+            print(f"⚠️  _is_hybrid_collection() check failed ({type(e).__name__}: {e}) — assuming hybrid")
+            return True
 
     # ── Dense-only fallback (old single-vector schema) ────────────────────────
 
