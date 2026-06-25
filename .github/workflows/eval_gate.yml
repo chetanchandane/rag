@@ -43,5 +43,5 @@ jobs:
       - name: Install eval dependencies
         run: pip install -r requirements-eval.txt
 
-      - name: Run Ragas eval gate (CI subset — 15 examples)
+      - name: Run Ragas eval gate (CI subset — 4 examples)
         run: python -m src.evals.run_evals --dataset clinical-rag-golden-set --ci

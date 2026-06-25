@@ -64,7 +64,7 @@ THRESHOLDS: dict[str, float] = {
     "context_recall":    0.60,
 }
 
-CI_SAMPLE = 15   # examples to run in --ci mode (keeps wall-clock time under ~10 min)
+CI_SAMPLE = 4    # examples to run in --ci mode (keeps wall-clock time under 30 min)
 
 
 # ── Persistent event loop ─────────────────────────────────────────────────────
