@@ -8,6 +8,7 @@
 [![Claude](https://img.shields.io/badge/Claude-D97757?style=flat-square&logo=anthropic&logoColor=white)](https://www.anthropic.com/claude)
 [![OpenAI](https://img.shields.io/badge/OpenAI-412991?style=flat-square&logo=openai&logoColor=white)](https://platform.openai.com/docs/guides/embeddings)
 [![Cohere](https://img.shields.io/badge/Cohere-39594D?style=flat-square&logo=cohere&logoColor=white)](https://cohere.com/rerank)
+[![Ragas](https://img.shields.io/badge/Ragas-4B5563?style=flat-square&logo=python&logoColor=white)](https://docs.ragas.io)
 [![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat-square&logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
 
 A production-grade Retrieval-Augmented Generation system for querying FDA and ICH regulatory documents. Ask compliance questions in plain English and get grounded, cited answers — no hallucinations.
@@ -46,9 +47,11 @@ FastAPI (/query)
 | Embeddings | OpenAI `text-embedding-3-small` (dense) + fastembed BM25 (sparse) |
 | Reranking | Cohere `rerank-english-v3.0` |
 | Vector DB | Qdrant Cloud (hybrid dense + sparse collection) |
-| Observability | LangSmith |
+| Observability | LangSmith (traces + offline eval experiments) |
+| Evaluation | Ragas 0.4 — Faithfulness, Answer Relevancy, Context Precision, Context Recall |
 | Frontend | Vanilla JS + CSS (dark theme) |
 | Deployment | Render |
+| CI/CD | GitHub Actions — Ragas quality gate on every PR |
 
 ---
 
@@ -66,24 +69,33 @@ RAG/
 │   │   ├── splitter.py       # Text chunking
 │   │   └── indexer.py        # Embed + upload to Qdrant (CLI entry point)
 │   ├── retrieval/
-│   │   ├── search.py         # Qdrant vector search
-│   │   └── reranker.py       # Re-ranking (passthrough in Stage 1)
+│   │   ├── search.py         # HyDE + hybrid BM25/dense search with RRF
+│   │   └── reranker.py       # Cohere cross-encoder reranking
 │   ├── generation/
 │   │   ├── prompts.py        # System prompt and context formatting
 │   │   └── llm_client.py     # Claude wrapper
-│   └── api/
-│       └── main.py           # FastAPI app + RAG orchestration
+│   ├── api/
+│   │   └── main.py           # FastAPI app + RAG orchestration
+│   └── evals/
+│       ├── generate_dataset.py  # Synthetic Q&A generation → LangSmith Dataset
+│       └── run_evals.py         # Ragas metrics → LangSmith Experiment + CI gate
 ├── ui/
 │   ├── index.html            # App shell
 │   ├── css/styles.css        # Dark theme, all 4 UI states
 │   └── js/app.js             # State machine, API calls, markdown rendering
 ├── tests/
 │   ├── test_ingestion.py
-│   └── test_retrieval.py
+│   ├── test_retrieval.py
+│   └── evals/
+│       └── test_evals.py     # Eval logic unit tests (requires requirements-eval.txt)
+├── .github/
+│   └── workflows/
+│       └── eval_gate.yml     # Ragas quality gate on every PR to main
 ├── .env.example
 ├── Dockerfile
 ├── render.yaml
-└── requirements.txt
+├── requirements.txt
+└── requirements-eval.txt     # Eval-only deps (never installed in production)
 ```
 
 ---
@@ -202,10 +214,61 @@ View traces at [smith.langchain.com](https://smith.langchain.com). Each trace sh
 ## Running Tests
 
 ```bash
-pytest tests/ -v
+# Unit tests (no API keys required)
+pytest tests/ -v --ignore=tests/evals
+
+# Eval unit tests (requires: pip install -r requirements-eval.txt)
+pytest tests/evals/ -v
 ```
 
-Tests cover chunking logic, metadata preservation, reranker passthrough, and prompt formatting — no API keys required.
+Unit tests cover chunking, metadata preservation, RRF merge logic, HyDE, and Cohere reranker — no external API calls.
+
+---
+
+## Offline Evaluation (Phase 3)
+
+Evaluation runs outside of production — no changes to `requirements.txt` or the Dockerfile.
+
+**Step 1 — Install eval dependencies (one time)**
+
+```bash
+pip install -r requirements-eval.txt
+```
+
+**Step 2 — Generate the golden dataset**
+
+```bash
+# Smoke test first (3 questions, ~$0.01)
+python -m src.evals.generate_dataset --sample 3 --dataset clinical-rag-golden-set-smoketest
+
+# Full dataset (30 questions)
+python -m src.evals.generate_dataset --sample 30 --dataset clinical-rag-golden-set
+```
+
+This samples chunks from Qdrant, asks Claude to generate one Q&A pair per chunk, and uploads examples to a LangSmith Dataset. View at [smith.langchain.com](https://smith.langchain.com) → **Datasets**.
+
+**Step 3 — Run Ragas evals**
+
+```bash
+# Full run (all examples)
+python -m src.evals.run_evals --dataset clinical-rag-golden-set
+
+# CI mode (first 15 examples — what GitHub Actions runs)
+python -m src.evals.run_evals --dataset clinical-rag-golden-set --ci
+```
+
+Scores appear as a **LangSmith Experiment** under Datasets → `clinical-rag-golden-set` → **Experiments**.
+
+**Metrics and thresholds (CI gate)**
+
+| Metric | Threshold | What it measures |
+|---|---|---|
+| Faithfulness | ≥ 0.70 | Does the answer stay grounded in the retrieved context? |
+| Answer Relevancy | ≥ 0.70 | Does the answer address the question? |
+| Context Precision | ≥ 0.60 | Are the retrieved chunks relevant to the ground truth? |
+| Context Recall | ≥ 0.60 | Do the retrieved chunks cover the ground truth? |
+
+All metrics use Claude Haiku as the judge LLM (cheaper than Sonnet for high-volume scoring).
 
 ---
 
@@ -223,6 +286,6 @@ Tests cover chunking logic, metadata preservation, reranker passthrough, and pro
 
 **Stage 1 (complete)** — Basic RAG: dense search, Claude generation, LangSmith tracing, dark-theme UI
 
-**Stage 2 (current)** — Advanced retrieval: HyDE query expansion, hybrid BM25 + dense search with RRF, Cohere cross-encoder reranking
+**Stage 2 (complete)** — Advanced retrieval: HyDE query expansion, hybrid BM25 + dense search with RRF, Cohere cross-encoder reranking
 
-**Stage 3** — Evaluation: synthetic golden dataset, Ragas metrics (Faithfulness, Context Precision), CI/CD quality gate
+**Stage 3 (complete)** — Evaluation: synthetic golden dataset via Claude, Ragas metrics (Faithfulness, Answer Relevancy, Context Precision, Context Recall), LangSmith Experiments, GitHub Actions CI/CD quality gate
