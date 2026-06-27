@@ -29,6 +29,7 @@ env/
 htmlcov/
 
 # Eval outputs — local JSONL files and result CSVs (never commit)
+eval_results
 tests/evals/golden_*.jsonl
 tests/evals/results/
 !tests/evals/results/.gitkeep
