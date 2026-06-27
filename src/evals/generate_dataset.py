@@ -53,6 +53,25 @@ QA_SYSTEM_PROMPT = (
     '{"question": "...", "ground_truth": "..."}'
 )
 
+
+def _multi_qa_prompt(n: int) -> str:
+    """System prompt for generating N *distinct* Q&A pairs from one passage."""
+    return (
+        "You are a clinical regulatory expert. "
+        f"Given a passage from an FDA or ICH guidance document, generate {n} DISTINCT, "
+        "non-overlapping compliance questions a clinical trial professional might ask, "
+        "each with a precise, complete answer based ONLY on the provided text.\n\n"
+        "Each question must be:\n"
+        "- Specific and answerable solely from the passage\n"
+        "- Phrased as a professional would ask it (not 'what does this say about X')\n"
+        "- A different angle from the others (e.g. timeline, definition, responsibility, procedure)\n"
+        "- Focused on regulatory requirements, timelines, definitions, or procedures\n\n"
+        "If the passage genuinely supports fewer than "
+        f"{n} distinct questions, return only as many as are well-grounded.\n\n"
+        "Respond ONLY with a valid JSON array — no markdown fences, no explanation:\n"
+        '[{"question": "...", "ground_truth": "..."}, ...]'
+    )
+
 OUTPUT_DIR = Path("tests/evals")
 
 
@@ -110,7 +129,9 @@ async def sample_chunks(n: int) -> list[dict]:
 
 # ── Q&A generation ────────────────────────────────────────────────────────────
 
-async def generate_qa(anthropic: AsyncAnthropic, chunk: dict) -> dict | None:
+async def generate_qa(
+    anthropic: AsyncAnthropic, chunk: dict, model: str = config.generation_model
+) -> dict | None:
     """
     Ask Claude to generate a (question, ground_truth) pair from one chunk.
     Returns None if the chunk is too short or Claude returns malformed JSON.
@@ -122,7 +143,7 @@ async def generate_qa(anthropic: AsyncAnthropic, chunk: dict) -> dict | None:
 
     try:
         response = await anthropic.messages.create(
-            model=config.generation_model,
+            model=model,
             max_tokens=512,
             system=QA_SYSTEM_PROMPT,
             messages=[{"role": "user", "content": f"Passage:\n\n{text}"}],
@@ -144,6 +165,51 @@ async def generate_qa(anthropic: AsyncAnthropic, chunk: dict) -> dict | None:
     except (json.JSONDecodeError, KeyError, ValueError) as e:
         print(f" ✗ (skipped — parse error: {e})")
         return None
+
+
+async def generate_qa_multi(
+    anthropic: AsyncAnthropic, chunk: dict, per_chunk: int,
+    model: str = config.generation_model,
+) -> list[dict]:
+    """
+    Ask Claude for `per_chunk` distinct (question, ground_truth) pairs from one
+    chunk. Returns a list (possibly shorter than per_chunk, or empty).
+    """
+    text = chunk["text"].strip()
+    if len(text) < 100:
+        return []
+
+    try:
+        response = await anthropic.messages.create(
+            model=model,
+            max_tokens=min(512 * per_chunk, 4096),
+            system=_multi_qa_prompt(per_chunk),
+            messages=[{"role": "user", "content": f"Passage:\n\n{text}"}],
+        )
+        raw = response.content[0].text.strip()
+        # tolerate accidental code fences
+        if raw.startswith("```"):
+            raw = raw.split("```", 2)[1].lstrip("json").strip()
+        items = json.loads(raw)
+        if isinstance(items, dict):
+            items = [items]
+
+        out: list[dict] = []
+        for qa in items:
+            if not qa.get("question") or not qa.get("ground_truth"):
+                continue
+            out.append({
+                "question":              qa["question"],
+                "ground_truth":          qa["ground_truth"],
+                "ground_truth_contexts": [text],
+                "source":                chunk["source"],
+                "page":                  chunk["page"],
+            })
+        return out
+
+    except (json.JSONDecodeError, KeyError, ValueError, TypeError) as e:
+        print(f"  ✗ (chunk parse error: {e})")
+        return []
 
 
 # ── LangSmith upload ──────────────────────────────────────────────────────────
@@ -198,8 +264,11 @@ async def main(args: argparse.Namespace) -> None:
         print(f"❌ Missing env vars: {', '.join(missing)}")
         sys.exit(1)
 
-    print(f"\n🔬 Generating {args.sample} Q&A pairs → dataset '{args.dataset}'")
-    print(f"   Mode: {'dry-run (no LangSmith upload)' if args.dry_run else 'live'}\n")
+    target_pairs = args.sample * args.per_chunk
+    print(f"\n🔬 Generating ~{target_pairs} Q&A pairs "
+          f"({args.sample} chunks × {args.per_chunk}/chunk) → dataset '{args.dataset}'")
+    print(f"   Concurrency: {args.concurrency}  |  "
+          f"Mode: {'dry-run (no LangSmith upload)' if args.dry_run else 'live'}\n")
 
     anthropic = AsyncAnthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
@@ -208,23 +277,35 @@ async def main(args: argparse.Namespace) -> None:
     chunks = await sample_chunks(n=args.sample)
     print(f"   Sampled {len(chunks)} chunks.\n")
 
-    # 2. Generate Q&A pairs
+    # 2. Generate Q&A pairs (concurrent, with a semaphore to respect rate limits)
     print("🤖 Generating Q&A pairs with Claude...")
     records: list[dict] = []
+    sem = asyncio.Semaphore(args.concurrency)
+    done = 0
+    total = len(chunks)
 
-    for i, chunk in enumerate(chunks, 1):
+    async def worker(idx: int, chunk: dict):
+        nonlocal done
+        async with sem:
+            if args.per_chunk == 1:
+                qa = await generate_qa(anthropic, chunk)
+                result = [qa] if qa else []
+            else:
+                result = await generate_qa_multi(anthropic, chunk, args.per_chunk)
+        done += 1
         label = f"{chunk['source']} p.{chunk['page']}"
-        print(f"  [{i:>2}/{len(chunks)}] {label[:60]}", end="", flush=True)
-        qa = await generate_qa(anthropic, chunk)
-        if qa:
-            records.append(qa)
-            print(" ✓")
+        print(f"  [{done:>3}/{total}] {label[:55]:<55} → {len(result)} pair(s)")
+        return result
+
+    results = await asyncio.gather(*(worker(i, c) for i, c in enumerate(chunks)))
+    for r in results:
+        records.extend(r)
 
     if not records:
         print("\n❌ No valid Q&A pairs generated. Check that chunks contain enough text.")
         sys.exit(1)
 
-    print(f"\n  Generated {len(records)}/{len(chunks)} valid pairs.\n")
+    print(f"\n  Generated {len(records)} valid pairs from {total} chunks.\n")
 
     # 3. Save locally
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -254,6 +335,15 @@ if __name__ == "__main__":
     parser.add_argument(
         "--sample", type=int, default=30,
         help="Number of Qdrant chunks to sample (default: 30).",
+    )
+    parser.add_argument(
+        "--per-chunk", type=int, default=1,
+        help="Distinct Q&A pairs to generate per chunk (default: 1). "
+             "Total pairs ≈ sample × per-chunk.",
+    )
+    parser.add_argument(
+        "--concurrency", type=int, default=5,
+        help="Max concurrent Claude calls (default: 5). Lower if you hit rate limits.",
     )
     parser.add_argument(
         "--dataset", type=str, default="clinical-rag-golden-set",
