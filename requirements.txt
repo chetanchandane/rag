@@ -19,6 +19,11 @@ langchain-text-splitters==0.3.2
 fastembed==0.8.0            # BM25 sparse embeddings (local, no API)
 cohere==7.0.4               # Cross-encoder reranking
 
+# Phase 3: Relational backend (text-to-SQL router)
+psycopg[binary]==3.2.3      # Postgres driver for the SQL path
+sqlglot==30.12.0            # AST validation for generated SQL (governance guard)
+certifi==2024.8.30          # CA bundle for openFDA TLS on macOS python.org builds
+
 # Utilities
 pydantic==2.10.3
 python-dotenv==1.0.1        # for local .env loading

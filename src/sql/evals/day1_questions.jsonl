@@ -1,0 +1,28 @@
+{"id": 1, "category": "approvals", "question": "How many approved drug products are there in total?", "gold_sql": "SELECT COUNT(*) FROM approvals"}
+{"id": 2, "category": "approvals", "question": "How many over-the-counter drugs are approved?", "gold_sql": "SELECT COUNT(*) FROM approvals WHERE marketing_status = 'Over-the-counter'"}
+{"id": 3, "category": "approvals", "question": "How many prescription drugs are there?", "gold_sql": "SELECT COUNT(*) FROM approvals WHERE marketing_status = 'Prescription'"}
+{"id": 4, "category": "approvals", "question": "How many discontinued drug products are there?", "gold_sql": "SELECT COUNT(*) FROM approvals WHERE marketing_status = 'Discontinued'"}
+{"id": 5, "category": "approvals", "question": "What are the 5 most recently approved drugs?", "gold_sql": "SELECT brand_name, approval_date FROM approvals ORDER BY approval_date DESC NULLS LAST LIMIT 5"}
+{"id": 6, "category": "approvals", "question": "Show discontinued prednisone products.", "gold_sql": "SELECT brand_name FROM approvals WHERE active_ingredient ILIKE '%prednisone%' AND marketing_status = 'Discontinued'"}
+{"id": 7, "category": "approvals", "question": "How many injectable drug products are approved?", "gold_sql": "SELECT COUNT(*) FROM approvals WHERE dosage_form = 'INJECTABLE'"}
+{"id": 8, "category": "approvals", "question": "What are the distinct dosage forms among approved drugs?", "gold_sql": "SELECT DISTINCT dosage_form FROM approvals"}
+{"id": 9, "category": "approvals", "question": "List the brand names of drugs sponsored by Marksans Pharma.", "gold_sql": "SELECT brand_name FROM approvals WHERE sponsor ILIKE '%MARKSANS%'"}
+{"id": 10, "category": "approvals", "question": "How many drugs were approved after January 1, 2020?", "gold_sql": "SELECT COUNT(*) FROM approvals WHERE approval_date > '2020-01-01'"}
+{"id": 11, "category": "approvals", "question": "What is the earliest approval date in the data?", "gold_sql": "SELECT MIN(approval_date) FROM approvals"}
+{"id": 12, "category": "approvals", "question": "How many approved products are taken by the oral route?", "gold_sql": "SELECT COUNT(*) FROM approvals WHERE route = 'ORAL'"}
+{"id": 13, "category": "approvals", "question": "Which sponsor has the most approved products?", "gold_sql": "SELECT sponsor, COUNT(*) FROM approvals GROUP BY sponsor ORDER BY COUNT(*) DESC LIMIT 1"}
+{"id": 14, "category": "approvals", "question": "How many products have a tentative approval marketing status?", "gold_sql": "SELECT COUNT(*) FROM approvals WHERE marketing_status = 'None (Tentative Approval)'"}
+{"id": 15, "category": "approvals", "question": "How many distinct sponsors are there?", "gold_sql": "SELECT COUNT(DISTINCT sponsor) FROM approvals"}
+{"id": 16, "category": "recalls", "question": "How many Class I drug recalls are there?", "gold_sql": "SELECT COUNT(*) FROM recalls WHERE classification = 'Class I'"}
+{"id": 17, "category": "recalls", "question": "How many recalls are there of each classification?", "gold_sql": "SELECT classification, COUNT(*) FROM recalls GROUP BY classification"}
+{"id": 18, "category": "recalls", "question": "How many recalls are currently ongoing?", "gold_sql": "SELECT COUNT(*) FROM recalls WHERE status = 'Ongoing'"}
+{"id": 19, "category": "recalls", "question": "How many recalls have been terminated?", "gold_sql": "SELECT COUNT(*) FROM recalls WHERE status = 'Terminated'"}
+{"id": 20, "category": "recalls", "question": "How many drug recalls are there in total?", "gold_sql": "SELECT COUNT(*) FROM recalls"}
+{"id": 21, "category": "recalls", "question": "How many Class III recalls are there?", "gold_sql": "SELECT COUNT(*) FROM recalls WHERE classification = 'Class III'"}
+{"id": 22, "category": "recalls", "question": "Which recalling firm issued the most recalls?", "gold_sql": "SELECT recalling_firm, COUNT(*) FROM recalls GROUP BY recalling_firm ORDER BY COUNT(*) DESC LIMIT 1"}
+{"id": 23, "category": "recalls", "question": "How many recalls mention injection in the product description?", "gold_sql": "SELECT COUNT(*) FROM recalls WHERE product_description ILIKE '%injection%'"}
+{"id": 24, "category": "recalls", "question": "What are the distinct recall classifications?", "gold_sql": "SELECT DISTINCT classification FROM recalls"}
+{"id": 25, "category": "recalls", "question": "What is the earliest recall initiation date?", "gold_sql": "SELECT MIN(recall_initiation_date) FROM recalls"}
+{"id": 26, "category": "recalls", "question": "How many recalls were initiated in 2026?", "gold_sql": "SELECT COUNT(*) FROM recalls WHERE recall_initiation_date >= '2026-01-01' AND recall_initiation_date < '2027-01-01'"}
+{"id": 27, "category": "recalls", "question": "List the distinct firms that had Class I recalls.", "gold_sql": "SELECT DISTINCT recalling_firm FROM recalls WHERE classification = 'Class I'"}
+{"id": 28, "category": "recalls", "question": "How many recalls were voluntary?", "gold_sql": "SELECT COUNT(*) FROM recalls WHERE voluntary_mandated ILIKE '%Voluntary%'"}

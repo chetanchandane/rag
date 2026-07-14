@@ -1,0 +1,49 @@
+# Semantic layer for the text-to-SQL path.
+# Retrieved into the generation prompt alongside schema.sql so the model maps
+# business terms to the right table/column without guessing. Cheap, high-value.
+
+tables:
+  approvals:
+    description: >
+      FDA-approved drug products, from openFDA drugsfda. One row per product
+      within a marketing application. Answers "what drugs are approved", by
+      sponsor, dosage form, marketing status, or approval date.
+    columns:
+      application_number: FDA application id, e.g. NDA017714 or ANDA074812.
+      product_number: Product id within an application.
+      brand_name: Marketed brand / trade name of the drug product.
+      active_ingredient: Active ingredient name(s), comma-separated if more than one.
+      dosage_form: Physical form, e.g. TABLET, INJECTABLE, CAPSULE, SOLUTION.
+      route: Route of administration, e.g. ORAL, INJECTION, TOPICAL.
+      marketing_status: >
+        One of Prescription, Over-the-counter, Discontinued,
+        or "None (Tentative Approval)".
+      sponsor: Company that owns the application.
+      approval_date: Date of original (ORIG) FDA approval. May be NULL.
+
+  recalls:
+    description: >
+      FDA drug recall / enforcement actions, from openFDA drug/enforcement.
+      One row per recall. Answers "what drugs were recalled", by severity,
+      status, firm, reason, or date.
+    columns:
+      recall_number: Unique recall id, e.g. D-321-2016.
+      product_description: Free-text product/drug name plus packaging details.
+      brand_name: Brand name when available (often NULL; prefer product_description for names).
+      generic_name: Generic name when available (often NULL).
+      recalling_firm: Company that issued the recall.
+      reason_for_recall: Free-text reason for the recall.
+      classification: >
+        Recall severity. Class I = most serious (risk of death), Class II =
+        temporary/reversible harm, Class III = least serious.
+      status: One of Ongoing, Completed, Terminated.
+      voluntary_mandated: Whether the recall was firm-initiated or FDA-mandated.
+      recall_initiation_date: Date the recall began.
+      report_date: Date the recall was reported.
+      termination_date: Date the recall ended. May be NULL if still active.
+
+notes:
+  - The two tables are INDEPENDENT. There is no reliable join key between them; answer from one table.
+  - Drug names in recalls are mostly in product_description (free text). Match names case-insensitively with ILIKE '%name%'.
+  - classification and marketing_status are exact strings; match them exactly.
+  - Date columns are real DATE type; use standard date comparisons and ORDER BY ... NULLS LAST when sorting by approval_date.
